@@ -58,9 +58,9 @@ class AbstractClass(ABC):
 
             model = self.loadModel(VOCAB_SIZE, NB_CLASSES)
 
-            model = self.trainModel(model, train_dataset, test_dataset, batch_size, epochs,hash_code)
+            trainer = self.trainModel(model, train_dataset, test_dataset, batch_size, epochs,hash_code)
 
-            self.evalModel(model, test_dataset)
+            self.evalModel(trainer, test_dataset)
 
             self.disconnectWandb()
 
@@ -250,6 +250,7 @@ class modelDistilbert(AbstractClass):
                                                        truncation=True,
                                                        return_attention_mask=True)
         return encoded
+
     def prepare(self, input_ids) -> List[List[int]]:
         label_counts = self._get_label_counts(input_ids.label)
         valid_labels = self._get_valid_labels(label_counts)
@@ -265,7 +266,6 @@ class modelDistilbert(AbstractClass):
         label = self.labels[idx]
         inputs = self.tokenizer(text, padding='max_length', truncation=True, max_length=self.max_length, return_tensors='pt')
         return {'input_ids': inputs['input_ids'][0], 'attention_mask': inputs['attention_mask'][0], 'labels': label}
-
 
     def splitData(self, k, input_ids,tokenizer):
         self.k = k
@@ -331,6 +331,48 @@ class modelDistilbert(AbstractClass):
         trainer.train()
         return trainer
 
+    def evalModel(self, trainer, test_dataset):
+
+        predict_results = trainer.predict(test_dataset)
+
+        y_test_dataset = []
+        for l in test_dataset:
+            y_test_dataset.append(l['labels'])
+
+        r_test_dataset = []
+        for pred in predict_results.predictions:
+            r_test_dataset.append(np.argmax(pred))
+
+        taccuracy = accuracy_score(y_test_dataset, r_test_dataset)
+        precision = precision_score(y_test_dataset, r_test_dataset, average='weighted')
+        recall = recall_score(y_test_dataset, r_test_dataset, average='weighted')
+        f1 = f1_score(y_test_dataset, r_test_dataset, average='weighted')
+
+
+
+        # # Registra as métricas no arquivo de logs
+        # # Salva as métricas em um arquivo de texto local
+        # logging.info(f"language: {c['language']}\n")
+        # logging.info(f"dataset: {c['dataset']}\n")
+        # logging.info(f"k: {i}\n")
+        # logging.info(f"Accuracy: {taccuracy}\n")
+        # logging.info(f"Precision: {precision}\n")
+        # logging.info(f"Recall: {recall}\n")
+        # logging.info(f"F1-score: {f1}\n")
+
+        wandb.log({
+            "t-Accuracy": taccuracy,
+            "t-Precision": precision,
+            "t-Recall": recall,
+            "t-F1-score": f1
+        })
+
+        wandb.log({"conf_mat" : wandb.plot.confusion_matrix(probs=None,
+                            y_true=y_test_dataset, preds=r_test_dataset,
+                            class_names=self.le.classes_)})
+
+
+
     def loadTokenizer(self, tokenizer_file) -> None:
         added_tokens = ['hand', 'movement', 'dynamic', 'head', 'body', 'location', 'punctuation', 'estaticidadeRTrue', 'estaticidadeRFalse', 'estaticidadeLTrue', 'estaticidadeLFalse', 'hands_qtd0', 'hands_qtd1', 'hands_qtd2', 'right', 'left']
         tokenizer = DistilBertTokenizerFast.from_pretrained(pretrained_model_name_or_path='Outputs/Tokenizers/DistilBertTokenizerFastSW', additional_special_tokens=added_tokens)
@@ -350,10 +392,19 @@ def client_code(abstract_class: AbstractClass, sweep_configuration) -> None:
 if __name__ == "__main__":
 
     # Example sweep configuration
+    # parameters = {
+    #     'dataset': ["details"],
+    #     'language': ['asl'],
+    #     'k': [12],
+    #     'tokenizer': ['DistilBertTokenizerFastSW'],
+    #     'model': ['Distilbert','DCNN'],
+    #     'batch_size':[16],
+    # }
+
     parameters = {
-        'dataset': ["details"],
-        'language': ['asl'],
-        'k': [8],
+        'dataset': ['slim','alfa',"details"],
+        'language': ['libras','germany','asl'],
+        'k': [15,14,13,12,11,10,9,8,7,6,5,4,3,2],
         'tokenizer': ['DistilBertTokenizerFastSW'],
         'model': ['Distilbert','DCNN'],
         'batch_size':[16],
