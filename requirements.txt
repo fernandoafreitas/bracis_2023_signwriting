@@ -1,0 +1,11 @@
+exrex
+numpy
+transformers
+tensorflow
+unidecode
+scikit-learn
+pandas
+wandb
+python-dotenv
+torch
+accelerate

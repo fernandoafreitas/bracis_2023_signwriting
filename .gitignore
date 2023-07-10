@@ -1,3 +1,7 @@
+Outputs/Models/ModelCheckpoints/*
+Artifacts/*
+Results/*
+wandb/*
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
