@@ -404,7 +404,7 @@ if __name__ == "__main__":
     parameters = {
         'dataset': ['slim','alfa',"details"],
         'language': ['libras','germany','asl'],
-        'k': [15,14,13,12,11,10,9,8,7,6,5,4,3,2],
+        'k': [12,11,10,9,8,7,6,5,4,3,2],
         'tokenizer': ['DistilBertTokenizerFastSW'],
         'model': ['Distilbert','DCNN'],
         'batch_size':[16],
